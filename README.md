@@ -7,17 +7,17 @@
 
    ```bash
    pip install -r requirements.txt
-   streamlit run app.py
+   python -m streamlit run app.py
    ```
 
 3. Se abrirá automáticamente en tu navegador (normalmente `http://localhost:8501`).
 
 ## Uso
 
-- El panel viene precargado con `Encuesta.xlsx` (los mismos 159 datos del informe).
-- Puedes subir un archivo nuevo desde el panel lateral ("Subir archivo de respuestas") para actualizar los datos sin tocar el código — debe tener las mismas columnas/preguntas.
+- El panel viene precargado con `Encuesta.xlsx` (los 159 datos de la encuesta) — no requiere subir ningún archivo.
 - Filtra por género desde el panel lateral.
-- Pestañas: Perfil, Procesos de inscripción, Comunicación, Recomendación (NPS), Texto libre (nubes de palabras).
+- Pestañas: Sentimiento, Puntos de fricción, Oportunidades de mejora, Perfil, NPS, Datos, Conclusiones.
+- Si en el futuro quieres actualizar los datos, reemplaza el archivo `Encuesta.xlsx` de esta misma carpeta por uno nuevo con las mismas columnas/preguntas, y vuelve a ejecutar la app.
 
 ## Publicarlo online (opcional, gratis)
 

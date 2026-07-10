@@ -276,25 +276,37 @@ def callout(title, text, kind="gold"):
 
 
 # ============================================================================
-# SIDEBAR — DATA SOURCE & FILTERS
+# SIDEBAR — FILTERS
 # ============================================================================
-st.sidebar.title("🎵 SCD — Encuesta de socios")
-uploaded = st.sidebar.file_uploader("Subir archivo de respuestas (.xlsx)", type=["xlsx"])
+st.sidebar.markdown(f"""
+<div style="text-align:center; padding: 6px 0 18px 0;">
+    <div style="font-size: 2.2rem; line-height:1;">🎵</div>
+    <div style="font-size: 1.15rem; font-weight: 700; color: {NAVY}; margin-top: 4px;">SCD</div>
+    <div style="font-size: 0.85rem; color: {GREY};">Encuesta de socios</div>
+</div>
+""", unsafe_allow_html=True)
 
-if uploaded is not None:
-    df_raw = load_data(uploaded)
-else:
-    df_raw = load_data("Encuesta.xlsx")
-    st.sidebar.caption("Usando datos de ejemplo incluidos (Encuesta.xlsx). Sube tu propio archivo para reemplazarlos.")
+df_raw = load_data("Encuesta.xlsx")
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("Filtros")
+st.sidebar.markdown(f"""
+<div style="background:{NAVY}; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; text-align:center;">
+    <span style="color:white; font-size: 0.85rem;">📊 {len(df_raw)} respuestas cargadas</span>
+</div>
+""", unsafe_allow_html=True)
+
+st.sidebar.markdown(f'<div style="font-weight:600; color:{NAVY}; margin-bottom:6px;">🔍 Filtros</div>', unsafe_allow_html=True)
 generos_disponibles = sorted(df_raw[COL_GENERO].dropna().unique().tolist())
 sel_genero = st.sidebar.multiselect("Género", generos_disponibles, default=generos_disponibles)
 df = df_raw[df_raw[COL_GENERO].isin(sel_genero)] if sel_genero else df_raw.copy()
 
 st.sidebar.markdown("---")
-st.sidebar.caption(f"Mostrando **{len(df)}** de {len(df_raw)} respuestas totales.")
+st.sidebar.markdown(f"""
+<div style="text-align:center;">
+    <span style="font-size: 1.6rem; font-weight:700; color:{NAVY};">{len(df)}</span>
+    <span style="color:{GREY};"> / {len(df_raw)} respuestas</span>
+</div>
+""", unsafe_allow_html=True)
+
 
 # ============================================================================
 # PRE-COMPUTE SHARED METRICS
