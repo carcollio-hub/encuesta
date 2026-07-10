@@ -360,8 +360,8 @@ st.markdown("---")
 # ============================================================================
 # TABS
 # ============================================================================
-tab_sent, tab_fric, tab_opp, tab_perfil, tab_nps, tab_datos = st.tabs(
-    ["😊 Sentimiento", "⚠️ Puntos de fricción", "💡 Oportunidades de mejora", "👤 Perfil", "⭐ NPS", "📋 Datos"]
+tab_sent, tab_fric, tab_opp, tab_perfil, tab_nps, tab_datos, tab_conclusiones = st.tabs(
+    ["😊 Sentimiento", "⚠️ Puntos de fricción", "💡 Oportunidades de mejora", "👤 Perfil", "⭐ NPS", "📋 Datos", "🧭 Conclusiones"]
 )
 
 # ---------------------------------------------------------------- SENTIMIENTO
@@ -609,115 +609,114 @@ with tab_datos:
     with st.expander("Base completa"):
         st.dataframe(df.reset_index(drop=True), use_container_width=True)
 
-# ============================================================================
-# CONCLUSIONES — ANÁLISIS EN PROFUNDIDAD
-# ============================================================================
-st.markdown("---")
-st.header("🧭 Conclusiones: análisis en profundidad")
-st.caption("Lectura integrada de los datos cuantitativos y del contenido textual, en el contexto del rol de SCD para los músicos en Chile.")
+# ---------------------------------------------------------------- CONCLUSIONES
+with tab_conclusiones:
+    st.markdown("---")
+    st.header("🧭 Conclusiones: análisis en profundidad")
+    st.caption("Lectura integrada de los datos cuantitativos y del contenido textual, en el contexto del rol de SCD para los músicos en Chile.")
 
-facil_ins_pct = round((df[COL_FACIL_INS] >= 4).mean() * 100, 1) if n else 0
-facil_obras_pct = round((df[COL_FACIL_OBRAS] >= 4).mean() * 100, 1) if n else 0
-acomp_masq_pct = round((df[COL_ACOMPANAMIENTO] == "Me gustaría más").mean() * 100, 1) if n else 0
-top3_friction = friction_counts.head(3)
-top3_opp = opp_counts.head(3)
+    facil_ins_pct = round((df[COL_FACIL_INS] >= 4).mean() * 100, 1) if n else 0
+    facil_obras_pct = round((df[COL_FACIL_OBRAS] >= 4).mean() * 100, 1) if n else 0
+    acomp_masq_pct = round((df[COL_ACOMPANAMIENTO] == "Me gustaría más").mean() * 100, 1) if n else 0
+    top3_friction = friction_counts.head(3)
+    top3_opp = opp_counts.head(3)
 
-st.markdown(f"""
-#### 1. El diagnóstico de fondo: una institución legitimada, pero poco cercana
+    st.markdown(f"""
+    #### 1. El diagnóstico de fondo: una institución legitimada, pero poco cercana
 
-Los números cuentan una historia consistente y, a la vez, un poco incómoda. El NPS de **{nps_score:+.1f}**
-y un **{pos_pct}%** de tono positivo en la palabra que la gente usa para describir su relación con SCD
-muestran que, en lo sustantivo, la institución goza de aprobación: la mayoría de los socios reconoce su
-valor y la recomendaría. Pero esa aprobación convive con una fricción persistente — solo **{acomp_si_pct}%**
-siente que el acompañamiento es suficiente, mientras un **{acomp_masq_pct}%** dice explícitamente
-*"me gustaría más"*. Esta no es una contradicción: es el patrón típico de una organización que ha resuelto
-bien su función legal y económica central (recaudar y distribuir derechos de autor) pero que todavía no ha
-resuelto, al mismo nivel, la experiencia relacional de sus socios.
+    Los números cuentan una historia consistente y, a la vez, un poco incómoda. El NPS de **{nps_score:+.1f}**
+    y un **{pos_pct}%** de tono positivo en la palabra que la gente usa para describir su relación con SCD
+    muestran que, en lo sustantivo, la institución goza de aprobación: la mayoría de los socios reconoce su
+    valor y la recomendaría. Pero esa aprobación convive con una fricción persistente — solo **{acomp_si_pct}%**
+    siente que el acompañamiento es suficiente, mientras un **{acomp_masq_pct}%** dice explícitamente
+    *"me gustaría más"*. Esta no es una contradicción: es el patrón típico de una organización que ha resuelto
+    bien su función legal y económica central (recaudar y distribuir derechos de autor) pero que todavía no ha
+    resuelto, al mismo nivel, la experiencia relacional de sus socios.
 
-#### 2. La paradoja "necesaria pero distante"
+    #### 2. La paradoja "necesaria pero distante"
 
-La nube de palabras de la Sección de Sentimiento expone esta tensión de forma casi literal: las palabras más
-repetidas — *"buena"*, *"necesaria"*, *"excelente"* — conviven con *"distante"* y *"lejana"* entre las más
-mencionadas. Esto no es ruido estadístico: es una misma persona pudiendo sostener ambas ideas a la vez.
-SCD es percibida como *necesaria* — no es opcional para un músico que quiere vivir de su obra en Chile,
-dado que es la entidad que canaliza la recaudación de derechos — pero esa necesidad institucional no se
-traduce automáticamente en una sensación de cercanía humana. Es la diferencia entre confiar en una
-institución y sentirse acompañado por ella. La segunda dimensión es la que hoy está más débil.
+    La nube de palabras de la Sección de Sentimiento expone esta tensión de forma casi literal: las palabras más
+    repetidas — *"buena"*, *"necesaria"*, *"excelente"* — conviven con *"distante"* y *"lejana"* entre las más
+    mencionadas. Esto no es ruido estadístico: es una misma persona pudiendo sostener ambas ideas a la vez.
+    SCD es percibida como *necesaria* — no es opcional para un músico que quiere vivir de su obra en Chile,
+    dado que es la entidad que canaliza la recaudación de derechos — pero esa necesidad institucional no se
+    traduce automáticamente en una sensación de cercanía humana. Es la diferencia entre confiar en una
+    institución y sentirse acompañado por ella. La segunda dimensión es la que hoy está más débil.
 
-#### 3. Qué revela la fricción operativa sobre el diseño del proceso
+    #### 3. Qué revela la fricción operativa sobre el diseño del proceso
 
-Los tres focos de fricción más mencionados en "¿Qué fue lo más complejo del proceso?" son:
-""")
+    Los tres focos de fricción más mencionados en "¿Qué fue lo más complejo del proceso?" son:
+    """)
 
-for i, (tema, count) in enumerate(top3_friction.items(), 1):
-    st.markdown(f"- **{i}. {tema}** — {count} menciones")
+    for i, (tema, count) in enumerate(top3_friction.items(), 1):
+        st.markdown(f"- **{i}. {tema}** — {count} menciones")
 
-st.markdown(f"""
-Leídos en conjunto, no describen un solo problema puntual, sino un **patrón de diseño**: un proceso de
-inscripción que todavía depende de trámites físicos, formularios manuales y ciclos de corrección de
-documentos, con poca instrumentación digital de punta a punta. Esto tiene un costo doble. Primero, un costo
-directo de tiempo y esfuerzo, más alto para quienes no viven cerca de una sucursal o no manejan bien lo
-administrativo. Segundo, un costo simbólico: cada corrección de formulario o cada llamada sin respuesta es,
-para el socio, una señal (probablemente no intencionada) de que la institución no está diseñada pensando en
-su experiencia, sino en su propio proceso interno. Es coherente que solo **{facil_ins_pct}%** califique
-como fácil o muy fácil la inscripción como socio y **{facil_obras_pct}%** la inscripción de obras: son
-mayorías, pero no son los niveles que uno esperaría de un trámite bien resuelto digitalmente.
+    st.markdown(f"""
+    Leídos en conjunto, no describen un solo problema puntual, sino un **patrón de diseño**: un proceso de
+    inscripción que todavía depende de trámites físicos, formularios manuales y ciclos de corrección de
+    documentos, con poca instrumentación digital de punta a punta. Esto tiene un costo doble. Primero, un costo
+    directo de tiempo y esfuerzo, más alto para quienes no viven cerca de una sucursal o no manejan bien lo
+    administrativo. Segundo, un costo simbólico: cada corrección de formulario o cada llamada sin respuesta es,
+    para el socio, una señal (probablemente no intencionada) de que la institución no está diseñada pensando en
+    su experiencia, sino en su propio proceso interno. Es coherente que solo **{facil_ins_pct}%** califique
+    como fácil o muy fácil la inscripción como socio y **{facil_obras_pct}%** la inscripción de obras: son
+    mayorías, pero no son los niveles que uno esperaría de un trámite bien resuelto digitalmente.
 
-#### 4. La brecha de acompañamiento es un síntoma, no la causa
+    #### 4. La brecha de acompañamiento es un síntoma, no la causa
 
-Es tentador leer el bajo puntaje de acompañamiento como un problema de "falta de cercanía humana" que se
-resolvería con más gente atendiendo teléfonos. Los datos sugieren algo más específico: **la frecuencia de
-comunicación no es el problema** — la gran mayoría recibe información semanal o mensualmente — sino su
-**relevancia percibida**. Cuando se pregunta qué esperarían y no reciben hoy, las respuestas no piden más
-comunicación en general, piden comunicación *útil*: información sobre cómo postular a festivales o
-concursos, claridad sobre monetización y regalías, orientación paso a paso cuando algo no calza en un
-formulario. El acompañamiento débil, entonces, no es un problema de volumen de contacto, sino de que ese
-contacto no está resolviendo las dudas concretas que un músico necesita resolver para avanzar en su carrera.
+    Es tentador leer el bajo puntaje de acompañamiento como un problema de "falta de cercanía humana" que se
+    resolvería con más gente atendiendo teléfonos. Los datos sugieren algo más específico: **la frecuencia de
+    comunicación no es el problema** — la gran mayoría recibe información semanal o mensualmente — sino su
+    **relevancia percibida**. Cuando se pregunta qué esperarían y no reciben hoy, las respuestas no piden más
+    comunicación en general, piden comunicación *útil*: información sobre cómo postular a festivales o
+    concursos, claridad sobre monetización y regalías, orientación paso a paso cuando algo no calza en un
+    formulario. El acompañamiento débil, entonces, no es un problema de volumen de contacto, sino de que ese
+    contacto no está resolviendo las dudas concretas que un músico necesita resolver para avanzar en su carrera.
 
-#### 5. La dimensión de equidad: centro y periferia, consolidado y emergente
+    #### 5. La dimensión de equidad: centro y periferia, consolidado y emergente
 
-Un hallazgo que merece atención especial, porque no es solo operativo sino también de **misión institucional**,
-es la demanda repetida de más apoyo para artistas emergentes y para músicos de regiones. Las oportunidades
-de mejora más mencionadas son:
-""")
+    Un hallazgo que merece atención especial, porque no es solo operativo sino también de **misión institucional**,
+    es la demanda repetida de más apoyo para artistas emergentes y para músicos de regiones. Las oportunidades
+    de mejora más mencionadas son:
+    """)
 
-for i, (tema, count) in enumerate(top3_opp.items(), 1):
-    st.markdown(f"- **{i}. {tema}** — {count} menciones")
+    for i, (tema, count) in enumerate(top3_opp.items(), 1):
+        st.markdown(f"- **{i}. {tema}** — {count} menciones")
 
-st.markdown(f"""
-Esto importa porque SCD, como entidad de gestión colectiva, cumple una función que trasciende lo administrativo:
-es, para muchos músicos independientes en Chile, la única vía formal de acceder a ingresos por derechos de
-autor. Cuando quienes recién empiezan — o quienes están fuera de Santiago — sienten que la institución les
-llega con menos fuerza, la conversación deja de ser solo sobre "buena atención al cliente" y pasa a ser sobre
-**qué tan equitativo es el acceso real** a la infraestructura de derechos de autor en Chile. Las respuestas
-textuales lo dicen sin rodeos: se percibe que "llegar a la radio o a un festival es casi un sueño con pocas
-probabilidades" para un músico emergente, y que la información sobre cómo participar de esos circuitos no
-siempre llega a quien más la necesita.
+    st.markdown(f"""
+    Esto importa porque SCD, como entidad de gestión colectiva, cumple una función que trasciende lo administrativo:
+    es, para muchos músicos independientes en Chile, la única vía formal de acceder a ingresos por derechos de
+    autor. Cuando quienes recién empiezan — o quienes están fuera de Santiago — sienten que la institución les
+    llega con menos fuerza, la conversación deja de ser solo sobre "buena atención al cliente" y pasa a ser sobre
+    **qué tan equitativo es el acceso real** a la infraestructura de derechos de autor en Chile. Las respuestas
+    textuales lo dicen sin rodeos: se percibe que "llegar a la radio o a un festival es casi un sueño con pocas
+    probabilidades" para un músico emergente, y que la información sobre cómo participar de esos circuitos no
+    siempre llega a quien más la necesita.
 
-#### 6. Qué dice esto sobre el rol de SCD en el ecosistema musical chileno
+    #### 6. Qué dice esto sobre el rol de SCD en el ecosistema musical chileno
 
-SCD ocupa un lugar particular: no es una empresa que compite por retener clientes en un mercado abierto, es
-una entidad de gestión colectiva cuya relación con sus socios es, en la práctica, de largo plazo y con pocas
-alternativas reales. Esa posición trae una responsabilidad distinta a la de cualquier otro servicio: cuando
-no hay competencia que discipline la experiencia de socio, la calidad del acompañamiento depende casi
-enteramente de una decisión interna de priorizarlo. Los resultados de esta encuesta muestran que la base de
-socios de SCD, en general, valora lo que la institución representa — protección legal, ingresos, pertenencia
-a un gremio — pero le está pidiendo, con bastante claridad, que la experiencia de ser socio se sienta tan
-profesional y cuidada como la función que cumple en el papel. Eso implica invertir en dos frentes muy
-concretos y medibles con esta misma encuesta a futuro: **digitalizar el trámite de principio a fin** (para
-bajar la fricción de "{top_friction.split(' ', 1)[-1]}")
-y **rediseñar el acompañamiento como una función de orientación de carrera**, no solo de soporte
-administrativo — especialmente para los socios más nuevos, más jóvenes o más alejados de Santiago.
+    SCD ocupa un lugar particular: no es una empresa que compite por retener clientes en un mercado abierto, es
+    una entidad de gestión colectiva cuya relación con sus socios es, en la práctica, de largo plazo y con pocas
+    alternativas reales. Esa posición trae una responsabilidad distinta a la de cualquier otro servicio: cuando
+    no hay competencia que discipline la experiencia de socio, la calidad del acompañamiento depende casi
+    enteramente de una decisión interna de priorizarlo. Los resultados de esta encuesta muestran que la base de
+    socios de SCD, en general, valora lo que la institución representa — protección legal, ingresos, pertenencia
+    a un gremio — pero le está pidiendo, con bastante claridad, que la experiencia de ser socio se sienta tan
+    profesional y cuidada como la función que cumple en el papel. Eso implica invertir en dos frentes muy
+    concretos y medibles con esta misma encuesta a futuro: **digitalizar el trámite de principio a fin** (para
+    bajar la fricción de "{top_friction.split(' ', 1)[-1]}")
+    y **rediseñar el acompañamiento como una función de orientación de carrera**, no solo de soporte
+    administrativo — especialmente para los socios más nuevos, más jóvenes o más alejados de Santiago.
 
-#### 7. Síntesis
+    #### 7. Síntesis
 
-En una frase: **SCD no tiene un problema de confianza, tiene un problema de cercanía.** La institución es
-vista como legítima y valiosa por la gran mayoría de sus socios (NPS {nps_score:+.1f}), pero el vínculo
-cotidiano — el trámite, el acompañamiento, la información oportuna — todavía se siente, para una parte
-importante de la base de socios, como algo que se recibe de forma distante más que como una relación activa
-y cercana. Cerrar esa brecha no requiere reconstruir la relación desde cero: requiere traducir la legitimidad
-institucional que SCD ya tiene en una experiencia de socio que se sienta igual de sólida en el día a día.
-""")
+    En una frase: **SCD no tiene un problema de confianza, tiene un problema de cercanía.** La institución es
+    vista como legítima y valiosa por la gran mayoría de sus socios (NPS {nps_score:+.1f}), pero el vínculo
+    cotidiano — el trámite, el acompañamiento, la información oportuna — todavía se siente, para una parte
+    importante de la base de socios, como algo que se recibe de forma distante más que como una relación activa
+    y cercana. Cerrar esa brecha no requiere reconstruir la relación desde cero: requiere traducir la legitimidad
+    institucional que SCD ya tiene en una experiencia de socio que se sienta igual de sólida en el día a día.
+    """)
 
 st.markdown("---")
 st.caption("Panel generado a partir de las respuestas del formulario SCD. El sentimiento y los temas de fricción/oportunidad se clasifican con reglas heurísticas de palabras clave — útil para priorizar, no reemplaza la lectura cualitativa completa.")
