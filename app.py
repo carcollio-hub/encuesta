@@ -220,8 +220,9 @@ def classify_themes(series: pd.Series, theme_dict: dict) -> pd.DataFrame:
 def make_wordcloud_png(freqs: dict, colormap: str = None, use_sentiment_colors: bool = False) -> bytes:
     if not freqs:
         return None
-    kwargs = dict(width=1200, height=650, background_color="white", max_words=60,
-                  prefer_horizontal=0.9, collocations=False, relative_scaling=0.4)
+    kwargs = dict(width=1600, height=900, background_color="white", max_words=45,
+                  prefer_horizontal=0.95, collocations=False, relative_scaling=0.55,
+                  min_font_size=12, max_font_size=220, margin=6)
     if use_sentiment_colors:
         def color_func(word, **kw):
             wl = word.lower()
@@ -232,14 +233,30 @@ def make_wordcloud_png(freqs: dict, colormap: str = None, use_sentiment_colors: 
             return GREY
         kwargs["color_func"] = color_func
     else:
-        kwargs["colormap"] = colormap or "cividis"
+        import matplotlib as mpl
+        try:
+            cmap = mpl.colormaps[colormap or "cividis"]
+        except (AttributeError, KeyError):
+            import matplotlib.cm as cm
+            cmap = cm.get_cmap(colormap or "cividis")
+        max_freq = max(freqs.values()) if freqs else 1
+
+        def color_func(word, font_size=None, **kw):
+            # Map word importance to the darker/more saturated 55%-100% band of the
+            # colormap so every word stays legible on a white background.
+            freq = freqs.get(word, 0)
+            t = 0.55 + 0.45 * (freq / max_freq if max_freq else 0)
+            r, g, b, _ = cmap(t)
+            return f"rgb({int(r*255)},{int(g*255)},{int(b*255)})"
+
+        kwargs["color_func"] = color_func
     wc = WordCloud(**kwargs).generate_from_frequencies(freqs)
-    fig, ax = plt.subplots(figsize=(10, 5.4))
-    ax.imshow(wc, interpolation="bilinear")
+    fig, ax = plt.subplots(figsize=(11, 6.2))
+    ax.imshow(wc, interpolation="lanczos")
     ax.axis("off")
     fig.tight_layout(pad=0)
     buf = BytesIO()
-    fig.savefig(buf, format="png", dpi=180, bbox_inches="tight", facecolor="white")
+    fig.savefig(buf, format="png", dpi=260, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return buf.getvalue()
 
@@ -372,15 +389,28 @@ with tab_sent:
         st.caption("🟢 Verde = tono positivo · 🔴 Rojo = tono negativo · ⚪ Gris = neutral / descriptivo")
 
     st.markdown("#### Voces de los socios")
+
+    def dedup_preserve_order(texts):
+        """Deduplicate quotes that are the same word/phrase (case-insensitive),
+        keeping the first occurrence found."""
+        seen = set()
+        unique = []
+        for t in texts:
+            key = str(t).strip().lower()
+            if key not in seen:
+                seen.add(key)
+                unique.append(t)
+        return unique
+
     q1, q2 = st.columns(2)
     with q1:
         st.markdown("**😊 Respuestas de tono positivo**")
-        pos_texts = short_palabra[sent_scores > 0].tolist()
+        pos_texts = dedup_preserve_order(short_palabra[sent_scores > 0].tolist())
         for t in pos_texts[:6]:
             quote_card(t, "pos")
     with q2:
         st.markdown("**😟 Respuestas de tono negativo**")
-        neg_texts = short_palabra[sent_scores < 0].tolist()
+        neg_texts = dedup_preserve_order(short_palabra[sent_scores < 0].tolist())
         for t in neg_texts[:6]:
             quote_card(t, "neg")
 
@@ -412,22 +442,44 @@ with tab_fric:
 
     with c2:
         freqs = dict(clean_words(df[COL_COMPLEJO], extra_stop={"proceso", "nada", "complejo", "complejidad"}).most_common(60))
-        png = make_wordcloud_png(freqs, colormap="autumn_r")
+        png = make_wordcloud_png(freqs, colormap="OrRd")
         st.markdown("**Nube de palabras — lo más complejo**")
         if png:
             st.image(png, use_container_width=True)
 
     st.markdown("#### Facilidad percibida de los procesos (cuantitativo)")
-    cc1, cc2 = st.columns(2)
-    with cc1:
-        vc1 = df[COL_FACIL_INS].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
-        vc2 = df[COL_FACIL_OBRAS].value_counts().reindex([1, 2, 3, 4, 5], fill_value=0)
+
+    def likert_diverging(col_map, title):
+        """Builds a horizontal 100%-stacked diverging bar: difícil (1-2) / neutral (3) / fácil (4-5)."""
+        rows = []
+        for label, col in col_map.items():
+            s = df[col].dropna()
+            total = len(s)
+            dificil = (s <= 2).sum() / total * 100 if total else 0
+            neutral = (s == 3).sum() / total * 100 if total else 0
+            facil = (s >= 4).sum() / total * 100 if total else 0
+            rows.append({"proceso": label, "Difícil (1-2)": dificil, "Neutral (3)": neutral, "Fácil (4-5)": facil})
+        d = pd.DataFrame(rows)
         fig = go.Figure()
-        fig.add_bar(x=[1, 2, 3, 4, 5], y=vc1.values, name="Inscripción en SCD", marker_color=NAVY)
-        fig.add_bar(x=[1, 2, 3, 4, 5], y=vc2.values, name="Inscripción de obras", marker_color=GOLD)
-        fig.update_layout(barmode="group", title="Facilidad percibida (1=muy difícil, 5=muy fácil)",
-                           xaxis_title="Puntaje", yaxis_title="N° de respuestas")
-        st.plotly_chart(fig, use_container_width=True)
+        fig.add_bar(y=d["proceso"], x=d["Difícil (1-2)"], name="Difícil (1-2)", orientation="h",
+                    marker_color=RED, text=[f"{v:.0f}%" for v in d["Difícil (1-2)"]], textposition="inside")
+        fig.add_bar(y=d["proceso"], x=d["Neutral (3)"], name="Neutral (3)", orientation="h",
+                    marker_color="#D9D2C4", text=[f"{v:.0f}%" for v in d["Neutral (3)"]], textposition="inside")
+        fig.add_bar(y=d["proceso"], x=d["Fácil (4-5)"], name="Fácil (4-5)", orientation="h",
+                    marker_color=GREEN, text=[f"{v:.0f}%" for v in d["Fácil (4-5)"]], textposition="inside")
+        fig.update_layout(barmode="stack", title=title, xaxis_title="% de respuestas", yaxis_title="",
+                           legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0))
+        fig.update_xaxes(ticksuffix="%")
+        return fig
+
+    fig = likert_diverging(
+        {"Inscripción en SCD (socio)": COL_FACIL_INS, "Inscripción de obras/canciones": COL_FACIL_OBRAS},
+        "¿Qué tan fácil fue el trámite? (% de respuestas por categoría)"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption("Cada barra suma 100%. Rojo = calificó el trámite como difícil o muy difícil (1-2) · Gris = neutral (3) · Verde = fácil o muy fácil (4-5).")
+
+    cc2 = st.container()
     with cc2:
         order2 = ["Sí", "Me gustaría más", "No"]
         vc = df[COL_ACOMPANAMIENTO].value_counts().reindex([o for o in order2 if o in df[COL_ACOMPANAMIENTO].unique()])
@@ -458,7 +510,7 @@ with tab_opp:
 
     with c2:
         freqs = dict(clean_words(df[COL_ESPERARIAS]).most_common(60))
-        png = make_wordcloud_png(freqs, colormap="ocean")
+        png = make_wordcloud_png(freqs, colormap="Blues")
         st.markdown("**Nube de palabras — expectativas**")
         if png:
             st.image(png, use_container_width=True)
@@ -509,11 +561,30 @@ with tab_nps:
     with c1:
         vc = df[COL_NPS].value_counts().reindex(range(0, 11), fill_value=0)
         colors = [RED if i <= 6 else (GOLD if i <= 8 else GREEN) for i in range(0, 11)]
-        fig = go.Figure(go.Bar(x=list(range(0, 11)), y=vc.values, marker_color=colors))
-        fig.update_layout(title="Probabilidad de recomendar SCD (0-10)",
-                           xaxis_title="Puntaje", yaxis_title="N° de respuestas",
-                           xaxis=dict(tickmode="linear"))
+        pcts = (vc / vc.sum() * 100) if vc.sum() else vc
+        fig = go.Figure(go.Bar(
+            x=list(range(0, 11)), y=vc.values, marker_color=colors,
+            text=[f"{v}<br>({p:.0f}%)" if v > 0 else "" for v, p in zip(vc.values, pcts)],
+            textposition="outside",
+        ))
+        # Shaded background zones so the three groups are visually obvious
+        fig.add_vrect(x0=-0.5, x1=6.5, fillcolor=RED, opacity=0.07, line_width=0,
+                      annotation_text="Detractores", annotation_position="top left",
+                      annotation_font_color=RED, annotation_font_size=11)
+        fig.add_vrect(x0=6.5, x1=8.5, fillcolor=GOLD, opacity=0.09, line_width=0,
+                      annotation_text="Pasivos", annotation_position="top",
+                      annotation_font_color=GOLD, annotation_font_size=11)
+        fig.add_vrect(x0=8.5, x1=10.5, fillcolor=GREEN, opacity=0.08, line_width=0,
+                      annotation_text="Promotores", annotation_position="top right",
+                      annotation_font_color=GREEN, annotation_font_size=11)
+        fig.update_layout(
+            title="¿Qué tan probable es que recomiendes SCD a otro músico? (0 a 10)",
+            xaxis_title="Puntaje otorgado", yaxis_title="N° de respuestas",
+            xaxis=dict(tickmode="linear", dtick=1), yaxis=dict(range=[0, max(vc.values) * 1.28]),
+            margin=dict(t=70),
+        )
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Cada barra muestra el número de respuestas y, entre paréntesis, el porcentaje sobre el total. Las franjas de color agrupan los puntajes según la metodología NPS.")
     with c2:
         fig = go.Figure(go.Indicator(
             mode="gauge+number", value=nps_score, title={"text": "NPS"},
@@ -537,6 +608,116 @@ with tab_datos:
         st.dataframe(df[[COL_PALABRA]].dropna().reset_index(drop=True), use_container_width=True)
     with st.expander("Base completa"):
         st.dataframe(df.reset_index(drop=True), use_container_width=True)
+
+# ============================================================================
+# CONCLUSIONES — ANÁLISIS EN PROFUNDIDAD
+# ============================================================================
+st.markdown("---")
+st.header("🧭 Conclusiones: análisis en profundidad")
+st.caption("Lectura integrada de los datos cuantitativos y del contenido textual, en el contexto del rol de SCD para los músicos en Chile.")
+
+facil_ins_pct = round((df[COL_FACIL_INS] >= 4).mean() * 100, 1) if n else 0
+facil_obras_pct = round((df[COL_FACIL_OBRAS] >= 4).mean() * 100, 1) if n else 0
+acomp_masq_pct = round((df[COL_ACOMPANAMIENTO] == "Me gustaría más").mean() * 100, 1) if n else 0
+top3_friction = friction_counts.head(3)
+top3_opp = opp_counts.head(3)
+
+st.markdown(f"""
+#### 1. El diagnóstico de fondo: una institución legitimada, pero poco cercana
+
+Los números cuentan una historia consistente y, a la vez, un poco incómoda. El NPS de **{nps_score:+.1f}**
+y un **{pos_pct}%** de tono positivo en la palabra que la gente usa para describir su relación con SCD
+muestran que, en lo sustantivo, la institución goza de aprobación: la mayoría de los socios reconoce su
+valor y la recomendaría. Pero esa aprobación convive con una fricción persistente — solo **{acomp_si_pct}%**
+siente que el acompañamiento es suficiente, mientras un **{acomp_masq_pct}%** dice explícitamente
+*"me gustaría más"*. Esta no es una contradicción: es el patrón típico de una organización que ha resuelto
+bien su función legal y económica central (recaudar y distribuir derechos de autor) pero que todavía no ha
+resuelto, al mismo nivel, la experiencia relacional de sus socios.
+
+#### 2. La paradoja "necesaria pero distante"
+
+La nube de palabras de la Sección de Sentimiento expone esta tensión de forma casi literal: las palabras más
+repetidas — *"buena"*, *"necesaria"*, *"excelente"* — conviven con *"distante"* y *"lejana"* entre las más
+mencionadas. Esto no es ruido estadístico: es una misma persona pudiendo sostener ambas ideas a la vez.
+SCD es percibida como *necesaria* — no es opcional para un músico que quiere vivir de su obra en Chile,
+dado que es la entidad que canaliza la recaudación de derechos — pero esa necesidad institucional no se
+traduce automáticamente en una sensación de cercanía humana. Es la diferencia entre confiar en una
+institución y sentirse acompañado por ella. La segunda dimensión es la que hoy está más débil.
+
+#### 3. Qué revela la fricción operativa sobre el diseño del proceso
+
+Los tres focos de fricción más mencionados en "¿Qué fue lo más complejo del proceso?" son:
+""")
+
+for i, (tema, count) in enumerate(top3_friction.items(), 1):
+    st.markdown(f"- **{i}. {tema}** — {count} menciones")
+
+st.markdown(f"""
+Leídos en conjunto, no describen un solo problema puntual, sino un **patrón de diseño**: un proceso de
+inscripción que todavía depende de trámites físicos, formularios manuales y ciclos de corrección de
+documentos, con poca instrumentación digital de punta a punta. Esto tiene un costo doble. Primero, un costo
+directo de tiempo y esfuerzo, más alto para quienes no viven cerca de una sucursal o no manejan bien lo
+administrativo. Segundo, un costo simbólico: cada corrección de formulario o cada llamada sin respuesta es,
+para el socio, una señal (probablemente no intencionada) de que la institución no está diseñada pensando en
+su experiencia, sino en su propio proceso interno. Es coherente que solo **{facil_ins_pct}%** califique
+como fácil o muy fácil la inscripción como socio y **{facil_obras_pct}%** la inscripción de obras: son
+mayorías, pero no son los niveles que uno esperaría de un trámite bien resuelto digitalmente.
+
+#### 4. La brecha de acompañamiento es un síntoma, no la causa
+
+Es tentador leer el bajo puntaje de acompañamiento como un problema de "falta de cercanía humana" que se
+resolvería con más gente atendiendo teléfonos. Los datos sugieren algo más específico: **la frecuencia de
+comunicación no es el problema** — la gran mayoría recibe información semanal o mensualmente — sino su
+**relevancia percibida**. Cuando se pregunta qué esperarían y no reciben hoy, las respuestas no piden más
+comunicación en general, piden comunicación *útil*: información sobre cómo postular a festivales o
+concursos, claridad sobre monetización y regalías, orientación paso a paso cuando algo no calza en un
+formulario. El acompañamiento débil, entonces, no es un problema de volumen de contacto, sino de que ese
+contacto no está resolviendo las dudas concretas que un músico necesita resolver para avanzar en su carrera.
+
+#### 5. La dimensión de equidad: centro y periferia, consolidado y emergente
+
+Un hallazgo que merece atención especial, porque no es solo operativo sino también de **misión institucional**,
+es la demanda repetida de más apoyo para artistas emergentes y para músicos de regiones. Las oportunidades
+de mejora más mencionadas son:
+""")
+
+for i, (tema, count) in enumerate(top3_opp.items(), 1):
+    st.markdown(f"- **{i}. {tema}** — {count} menciones")
+
+st.markdown(f"""
+Esto importa porque SCD, como entidad de gestión colectiva, cumple una función que trasciende lo administrativo:
+es, para muchos músicos independientes en Chile, la única vía formal de acceder a ingresos por derechos de
+autor. Cuando quienes recién empiezan — o quienes están fuera de Santiago — sienten que la institución les
+llega con menos fuerza, la conversación deja de ser solo sobre "buena atención al cliente" y pasa a ser sobre
+**qué tan equitativo es el acceso real** a la infraestructura de derechos de autor en Chile. Las respuestas
+textuales lo dicen sin rodeos: se percibe que "llegar a la radio o a un festival es casi un sueño con pocas
+probabilidades" para un músico emergente, y que la información sobre cómo participar de esos circuitos no
+siempre llega a quien más la necesita.
+
+#### 6. Qué dice esto sobre el rol de SCD en el ecosistema musical chileno
+
+SCD ocupa un lugar particular: no es una empresa que compite por retener clientes en un mercado abierto, es
+una entidad de gestión colectiva cuya relación con sus socios es, en la práctica, de largo plazo y con pocas
+alternativas reales. Esa posición trae una responsabilidad distinta a la de cualquier otro servicio: cuando
+no hay competencia que discipline la experiencia de socio, la calidad del acompañamiento depende casi
+enteramente de una decisión interna de priorizarlo. Los resultados de esta encuesta muestran que la base de
+socios de SCD, en general, valora lo que la institución representa — protección legal, ingresos, pertenencia
+a un gremio — pero le está pidiendo, con bastante claridad, que la experiencia de ser socio se sienta tan
+profesional y cuidada como la función que cumple en el papel. Eso implica invertir en dos frentes muy
+concretos y medibles con esta misma encuesta a futuro: **digitalizar el trámite de principio a fin** (para
+bajar la fricción de "{top_friction.split(' ', 1)[-1]}")
+y **rediseñar el acompañamiento como una función de orientación de carrera**, no solo de soporte
+administrativo — especialmente para los socios más nuevos, más jóvenes o más alejados de Santiago.
+
+#### 7. Síntesis
+
+En una frase: **SCD no tiene un problema de confianza, tiene un problema de cercanía.** La institución es
+vista como legítima y valiosa por la gran mayoría de sus socios (NPS {nps_score:+.1f}), pero el vínculo
+cotidiano — el trámite, el acompañamiento, la información oportuna — todavía se siente, para una parte
+importante de la base de socios, como algo que se recibe de forma distante más que como una relación activa
+y cercana. Cerrar esa brecha no requiere reconstruir la relación desde cero: requiere traducir la legitimidad
+institucional que SCD ya tiene en una experiencia de socio que se sienta igual de sólida en el día a día.
+""")
 
 st.markdown("---")
 st.caption("Panel generado a partir de las respuestas del formulario SCD. El sentimiento y los temas de fricción/oportunidad se clasifican con reglas heurísticas de palabras clave — útil para priorizar, no reemplaza la lectura cualitativa completa.")
