@@ -44,6 +44,62 @@ st.markdown(f"""
 }}
 .quote-card.neg {{ border-left-color: {RED}; background: #FBF0EE; }}
 .quote-card.pos {{ border-left-color: {GREEN}; background: #EFF7F2; }}
+
+/* ---------------- SIDEBAR ---------------- */
+section[data-testid="stSidebar"] {{
+    background: linear-gradient(180deg, #FFFFFF 0%, #F4F7F8 100%);
+    border-right: 1px solid #E4E9EA;
+}}
+section[data-testid="stSidebar"] .block-container {{
+    padding-top: 1.6rem;
+}}
+.sb-brand {{
+    text-align: center; padding: 4px 0 20px 0;
+}}
+.sb-brand .sb-icon {{
+    font-size: 2.4rem; line-height:1;
+    filter: drop-shadow(0 2px 4px rgba(31,78,95,0.25));
+}}
+.sb-brand .sb-name {{
+    font-size: 1.25rem; font-weight: 800; color: {NAVY}; margin-top: 6px; letter-spacing: 0.5px;
+}}
+.sb-brand .sb-sub {{
+    font-size: 0.82rem; color: {GREY}; margin-top: 1px;
+}}
+.sb-brand .sb-divider {{
+    width: 46px; height: 3px; margin: 10px auto 0 auto; border-radius: 3px;
+    background: linear-gradient(90deg, {NAVY}, {GOLD});
+}}
+.sb-metric-card {{
+    background: linear-gradient(135deg, {NAVY} 0%, #123542 100%);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(31,78,95,0.22);
+    display: flex; align-items: center; gap: 10px;
+}}
+.sb-metric-card .sb-metric-icon {{ font-size: 1.5rem; }}
+.sb-metric-card .sb-metric-value {{ color: white; font-size: 1.15rem; font-weight: 800; line-height: 1.1; }}
+.sb-metric-card .sb-metric-label {{ color: rgba(255,255,255,0.75); font-size: 0.72rem; }}
+.sb-section-label {{
+    font-weight: 700; color: {NAVY}; font-size: 0.9rem; margin: 4px 0 8px 0;
+    text-transform: uppercase; letter-spacing: 0.6px;
+}}
+.sb-filter-card {{
+    background: white; border: 1px solid #E4E9EA; border-radius: 12px;
+    padding: 14px 14px 4px 14px; margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}}
+section[data-testid="stSidebar"] .stMultiSelect [data-baseweb="tag"] {{
+    background-color: {NAVY} !important;
+}}
+.sb-count-wrap {{ text-align:center; padding: 4px 0 8px 0; }}
+.sb-count-value {{ font-size: 1.9rem; font-weight: 800; color: {NAVY}; }}
+.sb-count-total {{ font-size: 0.95rem; color: {GREY}; }}
+.sb-progress-track {{
+    width: 100%; height: 7px; background: #E4E9EA; border-radius: 6px; margin-top: 8px; overflow: hidden;
+}}
+.sb-progress-fill {{
+    height: 100%; background: linear-gradient(90deg, {GOLD}, {NAVY}); border-radius: 6px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -278,32 +334,39 @@ def callout(title, text, kind="gold"):
 # ============================================================================
 # SIDEBAR — FILTERS
 # ============================================================================
-st.sidebar.markdown(f"""
-<div style="text-align:center; padding: 6px 0 18px 0;">
-    <div style="font-size: 2.2rem; line-height:1;">🎵</div>
-    <div style="font-size: 1.15rem; font-weight: 700; color: {NAVY}; margin-top: 4px;">SCD</div>
-    <div style="font-size: 0.85rem; color: {GREY};">Encuesta de socios</div>
-</div>
-""", unsafe_allow_html=True)
-
 df_raw = load_data("Encuesta.xlsx")
 
 st.sidebar.markdown(f"""
-<div style="background:{NAVY}; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; text-align:center;">
-    <span style="color:white; font-size: 0.85rem;">📊 {len(df_raw)} respuestas cargadas</span>
+<div class="sb-brand">
+    <div class="sb-icon">🎵</div>
+    <div class="sb-name">SCD</div>
+    <div class="sb-sub">Encuesta de relación con socios</div>
+    <div class="sb-divider"></div>
 </div>
+<div class="sb-metric-card">
+    <div class="sb-metric-icon">📊</div>
+    <div>
+        <div class="sb-metric-value">{len(df_raw)} respuestas</div>
+        <div class="sb-metric-label">BASE TOTAL DE LA ENCUESTA</div>
+    </div>
+</div>
+<div class="sb-section-label">🔍 Filtros</div>
 """, unsafe_allow_html=True)
 
-st.sidebar.markdown(f'<div style="font-weight:600; color:{NAVY}; margin-bottom:6px;">🔍 Filtros</div>', unsafe_allow_html=True)
-generos_disponibles = sorted(df_raw[COL_GENERO].dropna().unique().tolist())
-sel_genero = st.sidebar.multiselect("Género", generos_disponibles, default=generos_disponibles)
+with st.sidebar.container():
+    st.markdown('<div class="sb-filter-card">', unsafe_allow_html=True)
+    generos_disponibles = sorted(df_raw[COL_GENERO].dropna().unique().tolist())
+    sel_genero = st.multiselect("Género", generos_disponibles, default=generos_disponibles, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
 df = df_raw[df_raw[COL_GENERO].isin(sel_genero)] if sel_genero else df_raw.copy()
 
-st.sidebar.markdown("---")
+pct_shown = (len(df) / len(df_raw) * 100) if len(df_raw) else 0
 st.sidebar.markdown(f"""
-<div style="text-align:center;">
-    <span style="font-size: 1.6rem; font-weight:700; color:{NAVY};">{len(df)}</span>
-    <span style="color:{GREY};"> / {len(df_raw)} respuestas</span>
+<div class="sb-count-wrap">
+    <span class="sb-count-value">{len(df)}</span>
+    <span class="sb-count-total"> / {len(df_raw)} respuestas mostradas</span>
+    <div class="sb-progress-track"><div class="sb-progress-fill" style="width:{pct_shown:.0f}%;"></div></div>
 </div>
 """, unsafe_allow_html=True)
 
